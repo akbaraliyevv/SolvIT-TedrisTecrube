@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolvIT - İctimai Problemlər</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
+        
+        .sidebar-container { 
+            width: 16rem; height: 100vh; position: fixed; top: 0; left: 0; z-index: 50; 
+            background: #111827; transition: all 0.3s ease;
+        }
+        
+        .content-area { margin-left: 16rem; min-height: 100vh; transition: all 0.3s ease; }
+        
+        @media (max-width: 1024px) { 
+            .sidebar-container { transform: translateX(-100%); }
+            .sidebar-container.active { transform: translateX(0); }
+            .content-area { margin-left: 0; }
+        }
+
+        .nav-link {
+            display: flex; align-items: center; padding: 0.75rem 1rem;
+            color: #d1d5db; border-radius: 0.75rem; transition: all 0.2s;
+        }
+        .nav-link:hover { background: #1f2937; color: white; }
+        .nav-link.active { background: #4f46e5; color: white; font-weight: 600; }
+        
+        .issue-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .issue-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            border-color: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="mobile-menu-button" class="lg:hidden fixed top-4 left-4 z-[60] bg-indigo-600 text-white p-2 rounded-md shadow-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    </button>
+
+    <div id="sidebar" class="sidebar-container shadow-2xl overflow-y-auto">
+        <div class="flex items-center px-6 h-20 border-b border-gray-800">
+            <span class="text-2xl font-black text-white tracking-tighter">SolvIT<span class="text-indigo-500"></span></span>
+        </div>
+        
+        <div class="p-6">
+            <div class="flex items-center space-x-3 mb-8 p-3 bg-gray-800/50 rounded-2xl">
+                <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
+                    {{ current_user.full_name[0] | upper if current_user else 'U' }}
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-white text-sm font-bold truncate">{{ current_user.full_name if current_user else 'İstifadəçi' }}</p>
+                    <p class="text-xs text-gray-400">{{ current_user.role if current_user else 'Vəzifə' }}</p>
+                </div>
+            </div>
+
+            <nav class="space-y-1">
+                <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Menyu</p>
+                <a href="{{ url_for('dashboard') }}" class="nav-link">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-10v10a1 1 0 001 1h3M14 10l-4-4-4 4"></path></svg>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('explore_issues') }}" class="nav-link active">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                 Problemlər
+                </a>
+                <a href="/new_issue" class="nav-link">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Yeni Bildiriş
+                </a>
+
+                <p class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-8 mb-2">Sistem</p>
+                <a href="{{ url_for('logout') }}" class="nav-link text-red-400 hover:bg-red-900/20">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    Çıxış
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <header class="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">İctimai Problemlər</h1>
+                <p class="text-xs text-gray-400 mt-1">Bütün aktiv bildirişlər bura toplanır</p>
+            </div>
+            <div class="flex items-center bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-bold border border-indigo-100 shadow-sm">
+                <span class="w-2 h-2 bg-indigo-500 rounded-full mr-2 animate-pulse"></span>
+                Cəmi: {{ issues|length }}
+            </div>
+        </header>
+
+        <main class="p-6 lg:p-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for issue in issues %}
+                <div class="issue-card bg-white rounded-3xl border border-gray-100 p-6 flex flex-col h-full shadow-sm hover:shadow-xl" 
+                     onclick="window.location.href='/issue/{{ issue.id }}'">
+                    
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-start mb-5">
+                            <span class="text-[10px] font-black text-indigo-500 bg-indigo-50/50 px-3 py-1 rounded-lg border border-indigo-100">#{{ issue.id }}</span>
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider
+                                {% if issue.priority == '4' %} bg-red-100 text-red-600 
+                                {% elif issue.priority == '3' %} bg-orange-100 text-orange-600 
+                                {% else %} bg-emerald-100 text-emerald-600 {% endif %}">
+                                {{ "Təcili" if issue.priority == '4' else "Normal" }}
+                            </span>
+                        </div>
+
+<h3 class="text-lg font-bold text-gray-900 mb-3 leading-tight group-hover:text-indigo-600 transition-colors">
+    {{ issue.title }}
+    
+    {% if not issue.is_public %}
+        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+            <svg class="w-2.5 h-2.5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+            Məxfi
+        </span>
+    {% endif %}
+
+    {% if issue.assigned_to_id == current_user.id %}
+        <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+            <svg class="w-2.5 h-2.5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path></svg>
+            Sizə təyin edilib
+        </span>
+    {% endif %}
+</h3>                 <p class="text-gray-500 text-sm line-clamp-3 mb-6 leading-relaxed">
+                            {{ issue.description }}
+                        </p>
+                    </div>
+
+                    <div class="pt-5 border-t border-gray-50 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white text-xs font-black shadow-inner">
+                                {{ issue.author.full_name[0] | upper if issue.author else 'S' }}
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-800 leading-none">{{ issue.author.full_name if issue.author else "Sistem" }}</p>
+                                <p class="text-[10px] text-gray-400 mt-1.5 flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    {{ issue.timestamp.strftime('%d %b %Y') }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-span-full text-center py-32 bg-white rounded-[2.5rem] border-2 border-dashed border-gray-100">
+                    <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <p class="text-gray-400 font-bold">Hələ ki, heç bir ictimai problem paylaşılmayıb.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mobil Menyu Toggle
+        const btn = document.getElementById('mobile-menu-button');
+        const sidebar = document.getElementById('sidebar');
+        btn.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+
+        // Kənar kliklə bağlama (opsional)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !btn.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
